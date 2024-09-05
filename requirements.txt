@@ -1,3 +1,5 @@
 pyrogram==2.0.30
 tgcrypto==1.2.3
-ntplib==0.3.4
+aiohttp
+Flask
+gunicorn
