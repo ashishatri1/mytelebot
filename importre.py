@@ -1,7 +1,18 @@
+import ntplib
+from time import ctime
 import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
+
+# Synchronize time with an NTP server
+def sync_time():
+    try:
+        client = ntplib.NTPClient()
+        response = client.request('pool.ntp.org')
+        print(f"Time synchronized: {ctime(response.tx_time)}")
+    except Exception as e:
+        print(f"Time synchronization failed: {e}")
 
 # Regular expression pattern to match valid channel/user IDs
 id_pattern = re.compile(r'^.\d+$')
@@ -12,9 +23,9 @@ AUTH_CHANNEL = [int(ch) if id_pattern.search(ch) else ch for ch in ['-1002214768
 # Initialize the bot with your credentials
 app = Client(
     "my_bot",
-    api_id=28630913,                       # Replace with your actual API ID
-    api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",  # Replace with your actual API Hash
-    bot_token="7018358870:AAFonX8JYsTf5PzK1o0lvFb8Qoyo5lxWsi8"  # Replace with your actual Bot Token
+    api_id=28630913,
+    api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",
+    bot_token="7018358870:AAFonX8JYsTf5PzK1o0lvFb8Qoyo5lxWsi8"
 )
 
 async def is_subscribed(bot, message, channels):
@@ -30,9 +41,8 @@ async def is_subscribed(bot, message, channels):
             pass
     return btn
 
-@app.on_message(filters.private)  # Handles all private messages
+@app.on_message(filters.private)
 async def check_subscription(client, message):
-    # Force subscribe logic
     if AUTH_CHANNEL:
         try:
             btn = await is_subscribed(client, message, AUTH_CHANNEL)
@@ -48,10 +58,12 @@ async def check_subscription(client, message):
             print(e)
             return
 
-    # If subscribed, respond normally (or handle other logic here)
     await message.reply_text(
         text=f"Hi minerva this side.. I'll reply soon.. thank you for joining ✨\n\nPlease drop your questions or suggestions/feedback in the meantime\n\nThank you for waiting ✨"
     )
+
+# Synchronize time before starting the bot
+sync_time()
 
 # Start the bot
 app.run()
