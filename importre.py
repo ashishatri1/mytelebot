@@ -2,6 +2,8 @@ import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
+import ntplib
+from time import ctime
 
 # Regular expression pattern to match valid channel/user IDs
 id_pattern = re.compile(r'^.\d+$')
@@ -17,6 +19,16 @@ app = Client(
     bot_token="7018358870:AAFonX8JYsTf5PzK1o0lvFb8Qoyo5lxWsi8"  # Replace with your actual Bot Token
 )
 
+# Function to synchronize time using ntplib
+def sync_time():
+    try:
+        ntp_client = ntplib.NTPClient()
+        response = ntp_client.request('pool.ntp.org')
+        print(f"Time synchronized: {ctime(response.tx_time)}")
+    except Exception as e:
+        print(f"Failed to sync time: {e}")
+
+# Function to check if the user is subscribed to the authorized channels
 async def is_subscribed(bot, message, channels):
     btn = []
     for channel in channels:
@@ -30,7 +42,8 @@ async def is_subscribed(bot, message, channels):
             pass
     return btn
 
-@app.on_message(filters.private)  # Handles all private messages
+# Handle all private messages
+@app.on_message(filters.private)
 async def check_subscription(client, message):
     # Force subscribe logic
     if AUTH_CHANNEL:
@@ -48,10 +61,13 @@ async def check_subscription(client, message):
             print(e)
             return
 
-    # If subscribed, respond normally (or handle other logic here)
+    # If subscribed, respond normally
     await message.reply_text(
         text=f"Hi minerva this side.. I'll reply soon.. thank you for joining ✨\n\nPlease drop your questions or suggestions/feedback in the meantime\n\nThank you for waiting ✨"
     )
+
+# Synchronize time before starting the bot
+sync_time()
 
 # Start the bot
 app.run()
