@@ -1,1 +1,1 @@
-web: python3 importe.py
+web: python3 importre.py
