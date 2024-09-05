@@ -3,3 +3,4 @@ tgcrypto==1.2.3
 aiohttp
 Flask
 gunicorn
+ntplib==0.3.4
