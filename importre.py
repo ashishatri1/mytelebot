@@ -25,7 +25,7 @@ app = Client(
     "my_bot",
     api_id=28630913,
     api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",
-    bot_token="7506256133:AAH5WcD86_vbrHKYyRSUnejEAOfiGL8oKpA"
+    bot_token="7018358870:AAFonX8JYsTf5PzK1o0lvFb8Qoyo5lxWsi8"
 )
 
 async def is_subscribed(bot, message, channels):
@@ -43,27 +43,44 @@ async def is_subscribed(bot, message, channels):
 
 @app.on_message(filters.private)
 async def check_subscription(client, message):
+    # Fetch the user's subscription status for all AUTH_CHANNELs
     if AUTH_CHANNEL:
         try:
             btn = await is_subscribed(client, message, AUTH_CHANNEL)
             if btn:
                 username = (await client.get_me()).username
                 btn.append([InlineKeyboardButton("I joined it!", url=f"https://t.me/{username}?start=true")])
-                await message.reply_text(
-                    text=f"Huh-? you left my channel.. why?😕\n\nYou need to join it to text me here !",
+                
+                # Send the join message
+                join_msg = await message.reply_text(
+                    text=f"HHuh-? you left my channel... :(\n\nYou need to join it to text here !",
                     reply_markup=InlineKeyboardMarkup(btn)
                 )
+                
+                # Listen for the user joining the channel
+                @app.on_message(filters.command("start") & filters.private)
+                async def after_join(_, joined_message):
+                    if message.from_user.id == joined_message.from_user.id:
+                        try:
+                            # Delete the previous message asking to join the channel
+                            await join_msg.delete()
+                        except:
+                            pass
+
+                        # Send thank you message after they join
+                        await message.reply_text(
+                            text=f"Thank you for joining! ✨\n\nPlease drop your questions or suggestions/feedback!"
+                        )
                 return
         except Exception as e:
             print(e)
             return
 
-    await message.reply_text(
-        text=f"Hi minerva this side.. I'll reply soon.. thank you for joining ✨\n\nPlease drop your questions or suggestions/feedback in the meantime\n\nThank you for waiting ✨"
-    )
+    # For new users, send a welcome message
+    if message.chat.id:  # Check if this is the first message from this user (simple way)
+        await message.reply_text(
+            text=f"Hi Minerva this side.. I'll reply soon.. thank you for joining ✨\n\nPlease drop your questions or suggestions/feedback in the meantime\n\nThank you for waiting ✨"
+        )
 
-# Synchronize time before starting the bot
-sync_time()
-
-# Start the bot
+# Run the bot
 app.run()
