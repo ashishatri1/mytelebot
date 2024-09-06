@@ -25,7 +25,7 @@ app = Client(
     "my_bot",
     api_id=28630913,
     api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",
-    bot_token="7018358870:AAFonX8JYsTf5PzK1o0lvFb8Qoyo5lxWsi8"
+    bot_token="7506256133:AAH5WcD86_vbrHKYyRSUnejEAOfiGL8oKpA"
 )
 
 async def is_subscribed(bot, message, channels):
@@ -50,7 +50,7 @@ async def check_subscription(client, message):
                 username = (await client.get_me()).username
                 btn.append([InlineKeyboardButton("I joined it!", url=f"https://t.me/{username}?start=true")])
                 await message.reply_text(
-                    text=f"HHuh-? you left my channel... :(\n\nYou need to join it to text here !",
+                    text=f"Huh-? you left my channel.. why?😕\n\nYou need to join it to text me here !",
                     reply_markup=InlineKeyboardMarkup(btn)
                 )
                 return
