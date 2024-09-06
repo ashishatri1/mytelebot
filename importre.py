@@ -25,62 +25,78 @@ app = Client(
     "my_bot",
     api_id=28630913,
     api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",
-    bot_token="7018358870:AAFonX8JYsTf5PzK1o0lvFb8Qoyo5lxWsi8"
+    bot_token="7506256133:AAH5WcD86_vbrHKYyRSUnejEAOfiGL8oKpA"
 )
 
-async def is_subscribed(bot, message, channels):
-    btn = []
+# Function to check if the user is subscribed
+async def is_subscribed(bot, user_id, channels):
     for channel in channels:
         try:
-            chat = await bot.get_chat(channel)
-            await bot.get_chat_member(channel, message.from_user.id)
+            await bot.get_chat_member(channel, user_id)
         except UserNotParticipant:
-            btn.append([InlineKeyboardButton(f'My Channel', url=chat.invite_link)])
+            return False
         except Exception as e:
             print(f"Error: {e}")
-            pass
-    return btn
+            return False
+    return True
 
-@app.on_message(filters.private)
+# Welcome message that should only be sent on `/start`
+@app.on_message(filters.command("start") & filters.private)
+async def send_welcome(client, message):
+    # Send the welcome message
+    await message.reply_text(
+        text="Hi, Minerva here! I'll reply soon.. thank you for joining ✨\n\nPlease drop your questions or suggestions/feedback in the meantime\n\nThank you for waiting ✨"
+    )
+
+# Middleware to check subscription before processing any other message or command
+@app.on_message(filters.private & ~filters.command("start"))
 async def check_subscription(client, message):
-    # Fetch the user's subscription status for all AUTH_CHANNELs
-    if AUTH_CHANNEL:
-        try:
-            btn = await is_subscribed(client, message, AUTH_CHANNEL)
-            if btn:
-                username = (await client.get_me()).username
-                btn.append([InlineKeyboardButton("I joined it!", url=f"https://t.me/{username}?start=true")])
-                
-                # Send the join message
-                join_msg = await message.reply_text(
-                    text=f"HHuh-? you left my channel... :(\n\nYou need to join it to text here !",
-                    reply_markup=InlineKeyboardMarkup(btn)
-                )
-                
-                # Listen for the user joining the channel
-                @app.on_message(filters.command("start") & filters.private)
-                async def after_join(_, joined_message):
-                    if message.from_user.id == joined_message.from_user.id:
-                        try:
-                            # Delete the previous message asking to join the channel
-                            await join_msg.delete()
-                        except:
-                            pass
-
-                        # Send thank you message after they join
-                        await message.reply_text(
-                            text=f"Thank you for joining! ✨\n\nPlease drop your questions or suggestions/feedback!"
-                        )
+    # Check if the user is subscribed to the required channels
+    is_user_subscribed = await is_subscribed(client, message.from_user.id, AUTH_CHANNEL)
+    
+    if not is_user_subscribed:
+        # If the user is not subscribed, prompt them to join the channel
+        btn = []
+        for channel in AUTH_CHANNEL:
+            try:
+                chat = await client.get_chat(channel)
+                btn.append([InlineKeyboardButton(f'My Channel', url=chat.invite_link)])
+            except Exception as e:
+                print(f"Error: {e}")
                 return
-        except Exception as e:
-            print(e)
-            return
-
-    # For new users, send a welcome message
-    if message.chat.id:  # Check if this is the first message from this user (simple way)
+        
+        # Add "I joined it!" button
+        btn.append([InlineKeyboardButton("I joined it!", callback_data="check_subscription")])
+        
+        # Send join prompt message
         await message.reply_text(
-            text=f"Hi Minerva this side.. I'll reply soon.. thank you for joining ✨\n\nPlease drop your questions or suggestions/feedback in the meantime\n\nThank you for waiting ✨"
+            text="HHuh-? you left my channel.. 😕\n\nYou need to join it to text here!",
+            reply_markup=InlineKeyboardMarkup(btn)
         )
+
+# Callback query handler for checking subscription status when the "I joined it!" button is clicked
+@app.on_callback_query(filters.regex("check_subscription"))
+async def check_subscription_callback(client: Client, callback_query):
+    user_id = callback_query.from_user.id
+    
+    # Check if the user is now subscribed
+    is_user_subscribed = await is_subscribed(client, user_id, AUTH_CHANNEL)
+    
+    if is_user_subscribed:  # User is subscribed
+        try:
+            # Delete the "Please join" message
+            await callback_query.message.delete()
+            
+            # Send a thank-you message
+            await client.send_message(
+                chat_id=user_id,
+                text="Thank you for joining! ✨\nNow drop your feedback/suggestion.."
+            )
+        except Exception as e:
+            print(f"Error while deleting join message: {e}")
+    else:
+        # Notify the user that they still need to join
+        await callback_query.answer("You still need to join the channel.", show_alert=True)
 
 # Run the bot
 app.run()
