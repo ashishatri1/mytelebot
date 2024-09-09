@@ -70,7 +70,7 @@ async def check_subscription(client, message):
         
         # Send join prompt message
         await message.reply_text(
-            text="HHuh-? you left my channel.. 😕\n\nYou need to join it to text here!",
+            text="HHuh-? you left my channel.. 😕\n\nYou need to join it and then send the message again!",
             reply_markup=InlineKeyboardMarkup(btn)
         )
 
