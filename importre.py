@@ -1,5 +1,6 @@
 import ntplib
 from time import ctime
+import asyncio
 import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
