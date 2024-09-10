@@ -4,6 +4,7 @@ import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
+import json
 
 # Synchronize time with an NTP server
 def sync_time():
@@ -20,6 +21,9 @@ id_pattern = re.compile(r'^.\d+$')
 # List of authorized channels for force subscription
 AUTH_CHANNEL = [int(ch) if id_pattern.search(ch) else ch for ch in ['-1002214768044']]
 
+# Load admin IDs (you should replace these with real admin user IDs)
+ADMINS = [7073941551]  # Add the user_id(s) of the admin(s)
+
 # Initialize the bot with your credentials
 app = Client(
     "my_bot",
@@ -27,6 +31,18 @@ app = Client(
     api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",
     bot_token="7506256133:AAH5WcD86_vbrHKYyRSUnejEAOfiGL8oKpA"
 )
+
+# Load or initialize the subscribers list
+try:
+    with open("subscribers.json", "r") as f:
+        subscribers = json.load(f)
+except FileNotFoundError:
+    subscribers = []
+
+# Function to save subscribers
+def save_subscribers():
+    with open("subscribers.json", "w") as f:
+        json.dump(subscribers, f)
 
 # Function to check if the user is subscribed
 async def is_subscribed(bot, user_id, channels):
@@ -40,9 +56,48 @@ async def is_subscribed(bot, user_id, channels):
             return False
     return True
 
+# Function to send broadcast message
+@app.on_message(filters.command("broadcast") & filters.private)
+async def broadcast(client, message):
+    # Check if the user is an admin
+    if message.from_user.id not in ADMINS:
+        await message.reply_text("You are not authorized to use this command.")
+        return
+    
+    # Extract the message to broadcast
+    broadcast_text = message.text.split(maxsplit=1)
+    
+    if len(broadcast_text) < 2:
+        await message.reply_text("Please provide a message to broadcast.")
+        return
+    
+    broadcast_text = broadcast_text[1]
+    
+    # Send the message to all subscribers
+    sent_count = 0
+    failed_count = 0
+    
+    for user_id in subscribers:
+        try:
+            await client.send_message(chat_id=user_id, text=broadcast_text)
+            sent_count += 1
+            await asyncio.sleep(1 / 25)
+        except Exception as e:
+            print(f"Failed to send message to {user_id}: {e}")
+            failed_count += 1
+    
+    await message.reply_text(f"Broadcast complete! Sent: {sent_count}, Failed: {failed_count}")
+
 # Welcome message that should only be sent on `/start`
 @app.on_message(filters.command("start") & filters.private)
 async def send_welcome(client, message):
+    user_id = message.from_user.id
+    
+    # Add user to the subscribers list if not already present
+    if user_id not in subscribers:
+        subscribers.append(user_id)
+        save_subscribers()
+    
     # Send the welcome message
     await message.reply_text(
         text="Hi, Minerva here! I'll reply soon.. thank you for joining ✨\n\nPlease drop your questions or suggestions/feedback in the meantime\n\nThank you for waiting ✨"
@@ -51,8 +106,10 @@ async def send_welcome(client, message):
 # Middleware to check subscription before processing any other message or command
 @app.on_message(filters.private & ~filters.command("start"))
 async def check_subscription(client, message):
+    user_id = message.from_user.id
+    
     # Check if the user is subscribed to the required channels
-    is_user_subscribed = await is_subscribed(client, message.from_user.id, AUTH_CHANNEL)
+    is_user_subscribed = await is_subscribed(client, user_id, AUTH_CHANNEL)
     
     if not is_user_subscribed:
         # If the user is not subscribed, prompt them to join the channel
@@ -73,6 +130,11 @@ async def check_subscription(client, message):
             text="HHuh-? you left my channel.. 😕\n\nYou need to join it and then send the message again!",
             reply_markup=InlineKeyboardMarkup(btn)
         )
+    else:
+        # Add user to the subscribers list if not already present
+        if user_id not in subscribers:
+            subscribers.append(user_id)
+            save_subscribers()
 
 # Callback query handler for checking subscription status when the "I joined it!" button is clicked
 @app.on_callback_query(filters.regex("check_subscription"))
