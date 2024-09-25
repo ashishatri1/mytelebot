@@ -29,7 +29,7 @@ app = Client(
     "my_bot",
     api_id=28630913,
     api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",
-    bot_token="7490788125:AAE9VjvI4GV9NmPyqnXVMFHMvFzAUo0c9-c"
+    bot_token="7506256133:AAH5WcD86_vbrHKYyRSUnejEAOfiGL8oKpA"
 )
 
 # Load or initialize the subscribers list
