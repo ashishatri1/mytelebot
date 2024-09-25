@@ -1,6 +1,5 @@
-import ntplib
+import ntplib 
 from time import ctime
-import asyncio
 import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -30,8 +29,32 @@ app = Client(
     "my_bot",
     api_id=28630913,
     api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",
-    bot_token="7506256133:AAH5WcD86_vbrHKYyRSUnejEAOfiGL8oKpA"
+    bot_token="7490788125:AAE9VjvI4GV9NmPyqnXVMFHMvFzAUo0c9-c"
 )
+
+# Load or initialize the subscribers list
+try:
+    with open("subscribers.json", "r") as f:
+        subscribers = json.load(f)
+except FileNotFoundError:
+    subscribers = []
+
+# Function to save subscribers
+def save_subscribers():
+    with open("subscribers.json", "w") as f:
+        json.dump(subscribers, f)
+
+# Function to check if the user is subscribed
+async def is_subscribed(bot, user_id, channels):
+    for channel in channels:
+        try:
+            await bot.get_chat_member(channel, user_id)
+        except UserNotParticipant:
+            return False
+        except Exception as e:
+            print(f"Error: {e}")
+            return False
+    return True
 
 # Middleware to check subscription before processing any other message or command
 @app.on_message(filters.private & ~filters.command("start"))
@@ -57,7 +80,7 @@ async def check_subscription(client, message):
         
         # Send join prompt message
         await message.reply_text(
-            text="HHuh-? you left my channel.. 😕\n\nYou need to join it and then send the message again!",
+            text="HHuh-? you left my channel.. 😕\n\nYou need to join it then click\n'I joined it' button!",
             reply_markup=InlineKeyboardMarkup(btn)
         )
     else:
@@ -74,10 +97,20 @@ async def check_subscription_callback(client: Client, callback_query):
     # Check if the user is now subscribed
     is_user_subscribed = await is_subscribed(client, user_id, AUTH_CHANNEL)
     
+    # Store the message ID of the "You did not join it!" message
+    if not hasattr(callback_query, 'not_joined_message_id'):
+        callback_query.not_joined_message_id = None
+    
     if is_user_subscribed:  # User is subscribed
         try:
             # Delete the "Please join" message
             await callback_query.message.delete()
+            
+            # If the "You did not join it!" message exists, delete it
+            if callback_query.not_joined_message_id:
+                await client.delete_messages(chat_id=user_id, message_ids=callback_query.not_joined_message_id)
+                # Reset not_joined_message_id after deletion
+                callback_query.not_joined_message_id = None
             
             # Send a thank-you message
             await client.send_message(
@@ -88,7 +121,13 @@ async def check_subscription_callback(client: Client, callback_query):
             print(f"Error while deleting join message: {e}")
     else:
         # Notify the user that they still need to join
-        await callback_query.answer("You still need to join the channel.", show_alert=True)
-
+        if callback_query.not_joined_message_id:
+            await client.delete_messages(chat_id=user_id, message_ids=callback_query.not_joined_message_id)
+        
+        not_joined_message = await client.send_message(
+            chat_id=user_id,
+            text="You did not join it!"
+        )
+        callback_query.not_joined_message_id = not_joined_message.id
 # Run the bot
 app.run()
