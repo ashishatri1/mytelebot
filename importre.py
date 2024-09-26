@@ -1,16 +1,25 @@
-import ntplib 
+import ntplib
 from time import ctime
 import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
-import json
+from pymongo import MongoClient
+import asyncio
+
+# MongoDB URI (replace with your actual URI)
+MONGO_URI = "mongodb+srv://cluster0:cluster0@cluster0.lpcw7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
+# Initialize MongoDB client and select the database and collection
+client = MongoClient(MONGO_URI)
+db = client["telegram_bot_db"]
+subscribers_collection = db["subscribers"]
 
 # Synchronize time with an NTP server
 def sync_time():
     try:
-        client = ntplib.NTPClient()
-        response = client.request('pool.ntp.org')
+        ntp_client = ntplib.NTPClient()
+        response = ntp_client.request('pool.ntp.org')
         print(f"Time synchronized: {ctime(response.tx_time)}")
     except Exception as e:
         print(f"Time synchronization failed: {e}")
@@ -29,19 +38,18 @@ app = Client(
     "my_bot",
     api_id=28630913,
     api_hash="2a7fd7bd9995cd7a5416286e6ac420b6",
-    bot_token="7506256133:AAH5WcD86_vbrHKYyRSUnejEAOfiGL8oKpA"
+    bot_token="7506256133:AAF506w0z6Tw7ugvtJYdTGm-X9AtLCugz94"
 )
 
-# Load or initialize the subscribers list
-try:
-    with open("subscribers.json", "r") as f:
-        subscribers = json.load(f)
-except FileNotFoundError:
-    subscribers = []
-# Function to save subscribers
-def save_subscribers():
-    with open("subscribers.json", "w") as f:
-        json.dump(subscribers, f)
+# Function to save subscribers to MongoDB
+def save_subscriber(user_id):
+    if not subscribers_collection.find_one({"user_id": user_id}):
+        subscribers_collection.insert_one({"user_id": user_id})
+
+# Function to get all subscribers from MongoDB
+def get_all_subscribers():
+    return [doc["user_id"] for doc in subscribers_collection.find()]
+
 # Function to check if the user is subscribed
 async def is_subscribed(bot, user_id, channels):
     for channel in channels:
@@ -53,6 +61,7 @@ async def is_subscribed(bot, user_id, channels):
             print(f"Error: {e}")
             return False
     return True
+
 # Function to send broadcast message
 @app.on_message(filters.command("broadcast") & filters.private)
 async def broadcast(client, message):
@@ -73,30 +82,31 @@ async def broadcast(client, message):
     # Send the message to all subscribers
     sent_count = 0
     failed_count = 0
+    subscribers = get_all_subscribers()
     
     for user_id in subscribers:
         try:
             await client.send_message(chat_id=user_id, text=broadcast_text)
             sent_count += 1
-            await asyncio.sleep(1 / 25)
+            await asyncio.sleep(1 / 15)
         except Exception as e:
             print(f"Failed to send message to {user_id}: {e}")
             failed_count += 1
     
     await message.reply_text(f"Broadcast complete! Sent: {sent_count}, Failed: {failed_count}")
+
 # Welcome message that should only be sent on `/start`
 @app.on_message(filters.command("start") & filters.private)
 async def send_welcome(client, message):
     user_id = message.from_user.id
     
     # Add user to the subscribers list if not already present
-    if user_id not in subscribers:
-        subscribers.append(user_id)
-        save_subscribers()
+    save_subscriber(user_id)
     
     # Send the welcome message
     await message.reply_text(
-        text="Hi I am the owner of channel.... I reply late sometimes✨\n\nPlease drop your questions or suggestions/feedback in the meantime)
+        text="Hi I am the owner of channel....\nI reply late sometimes✨\n\nPlease drop your questions or suggestions/feedback in the meantime"
+    )
 
 # Middleware to check subscription before processing any other message or command
 @app.on_message(filters.private & ~filters.command("start"))
@@ -127,9 +137,7 @@ async def check_subscription(client, message):
         )
     else:
         # Add user to the subscribers list if not already present
-        if user_id not in subscribers:
-            subscribers.append(user_id)
-            save_subscribers()
+        save_subscriber(user_id)
 
 # Callback query handler for checking subscription status when the "I joined it!" button is clicked
 @app.on_callback_query(filters.regex("check_subscription"))
@@ -171,5 +179,6 @@ async def check_subscription_callback(client: Client, callback_query):
             text="You did not join it!"
         )
         callback_query.not_joined_message_id = not_joined_message.id
+
 # Run the bot
 app.run()
