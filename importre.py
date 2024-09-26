@@ -38,12 +38,10 @@ try:
         subscribers = json.load(f)
 except FileNotFoundError:
     subscribers = []
-
 # Function to save subscribers
 def save_subscribers():
     with open("subscribers.json", "w") as f:
         json.dump(subscribers, f)
-
 # Function to check if the user is subscribed
 async def is_subscribed(bot, user_id, channels):
     for channel in channels:
@@ -55,6 +53,50 @@ async def is_subscribed(bot, user_id, channels):
             print(f"Error: {e}")
             return False
     return True
+# Function to send broadcast message
+@app.on_message(filters.command("broadcast") & filters.private)
+async def broadcast(client, message):
+    # Check if the user is an admin
+    if message.from_user.id not in ADMINS:
+        await message.reply_text("You are not authorized to use this command.")
+        return
+    
+    # Extract the message to broadcast
+    broadcast_text = message.text.split(maxsplit=1)
+    
+    if len(broadcast_text) < 2:
+        await message.reply_text("Please provide a message to broadcast.")
+        return
+    
+    broadcast_text = broadcast_text[1]
+    
+    # Send the message to all subscribers
+    sent_count = 0
+    failed_count = 0
+    
+    for user_id in subscribers:
+        try:
+            await client.send_message(chat_id=user_id, text=broadcast_text)
+            sent_count += 1
+            await asyncio.sleep(1 / 25)
+        except Exception as e:
+            print(f"Failed to send message to {user_id}: {e}")
+            failed_count += 1
+    
+    await message.reply_text(f"Broadcast complete! Sent: {sent_count}, Failed: {failed_count}")
+# Welcome message that should only be sent on `/start`
+@app.on_message(filters.command("start") & filters.private)
+async def send_welcome(client, message):
+    user_id = message.from_user.id
+    
+    # Add user to the subscribers list if not already present
+    if user_id not in subscribers:
+        subscribers.append(user_id)
+        save_subscribers()
+    
+    # Send the welcome message
+    await message.reply_text(
+        text="Hi I am the owner of channel.... I reply late sometimes✨\n\nPlease drop your questions or suggestions/feedback in the meantime)
 
 # Middleware to check subscription before processing any other message or command
 @app.on_message(filters.private & ~filters.command("start"))
