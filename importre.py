@@ -105,7 +105,7 @@ async def send_welcome(client, message):
     
     # Send the welcome message
     await message.reply_text(
-        text="Hi I am the owner of channel....\nI reply late sometimes✨\n\nPlease drop your questions or suggestions/feedback in the meantime"
+        text="Hi I am owner of the channel\n\n\Please drop your questions or suggestions/feedback i'll try to reply asap"
     )
 
 # Middleware to check subscription before processing any other message or command
@@ -132,7 +132,7 @@ async def check_subscription(client, message):
         
         # Send join prompt message
         await message.reply_text(
-            text="HHuh-? you left my channel.. 😕\n\nYou need to join it then click\n'I joined it' button!",
+            text="You left the channel\n\nYou need to join channel to send the message",
             reply_markup=InlineKeyboardMarkup(btn)
         )
     else:
@@ -165,7 +165,7 @@ async def check_subscription_callback(client: Client, callback_query):
             # Send a thank-you message
             await client.send_message(
                 chat_id=user_id,
-                text="Thank you for joining! ✨\nYou can send your question now.."
+                text="Thank you for joining!\nYou can send your question now.."
             )
         except Exception as e:
             print(f"Error while deleting join message: {e}")
