@@ -105,7 +105,7 @@ async def send_welcome(client, message):
     
     # Send the welcome message
     await message.reply_text(
-        text="Hi I am owner of the channel this is automatic reply\n\n\Please drop your questions or suggestions/feedback i'll try to reply asap"
+        text="Hi I am owner of the channel this is an automated reply\n\n\Please drop your questions or suggestions/feedback i'll try to reply asap"
     )
 
 # Middleware to check subscription before processing any other message or command
