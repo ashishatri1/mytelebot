@@ -165,7 +165,7 @@ async def check_subscription_callback(client: Client, callback_query):
             # Send a thank-you message
             await client.send_message(
                 chat_id=user_id,
-                text="Thank you for joining!\nYou can send your question now.."
+                text="Thank you for joining!\nYou can send your message now.."
             )
         except Exception as e:
             print(f"Error while deleting join message: {e}")
