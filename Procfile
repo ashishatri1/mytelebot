@@ -1,1 +1,1 @@
-writer: python3 importre.py
+worker: python3 bot.py
