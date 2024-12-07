@@ -5,3 +5,7 @@ aiohttp
 Flask
 gunicorn
 ntplib==0.3.4
+cryptg
+python-dotenv
+Telethon
+
